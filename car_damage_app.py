@@ -43,7 +43,45 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     image_np = np.array(image)
 
-    # Run YOLOv8 inference
-    results = model(image_np)
+    # Debug: Check the image shape
+    st.write("Image Shape:", image_np.shape)
 
-    # Visualize the results
+    # Run YOLOv8 inference
+    try:
+        results = model(image_np)
+
+        # Debug: Print the YOLOv8 results
+        st.write("YOLOv8 Results:", results)
+
+        # Visualize the results
+        annotated_frame = results[0].plot()  # Annotated image with detections
+        st.image(annotated_frame, caption="Detected Objects", use_container_width=True)
+
+        # Extract detected labels
+        detected_labels = []
+        if results[0].boxes is not None and results[0].boxes.data is not None:
+            # Iterate through the detected boxes
+            for box in results[0].boxes.data:
+                # Extract the class index and map it to the class name
+                class_index = int(box[5])  # Assuming the 6th element is the class index
+                class_name = results[0].names[class_index]
+                detected_labels.append(class_name)
+
+        st.subheader("🔍 Detected Labels")
+        if detected_labels:
+            st.write(", ".join(detected_labels))
+
+            # Estimate repair costs
+            min_cost, max_cost = estimate_cost(detected_labels)
+            st.subheader("💰 Estimated Repair Cost")
+            st.write(f"Estimated Cost: **${min_cost} - ${max_cost}**")
+
+            # Display nearby garages
+            st.subheader("🧭 Recommended Nearby Garages")
+            for g in get_nearby_garages():
+                st.markdown(f"**{g['name']}**")
+                st.write(f"📍 {g['address']} — ⭐ {g['rating']}")
+        else:
+            st.info("No damage-related labels detected.")
+    except Exception as e:
+        st.error(f"An error occurred during inference: {e}")
